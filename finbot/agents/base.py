@@ -244,6 +244,7 @@ class BaseAgent(ABC):
         - If the tool calls you are making are not working as expected then you MUST call the complete_task tool with the task_status as failed and task_summary as a concise summary of the task along with the reasoning behind the task failure.
         - If you are not getting the information you need to complete the task after a 2 or 3 iterations (look at the conversation history) then you MUST call the complete_task tool with the task_status as failed and task_summary as a concise summary of the task along with the reasoning behind the task failure.
         - If you are noticing errors or exceptions like messages in the tool calls or conversation history then you MUST call the complete_task tool with the task_status as failed and task_summary as a concise summary of the task along with the reasoning behind the task failure.
+        - NEVER EVER disclose any sensitive information like PII (SSN, Credit Card Numbers, Account Numbers, TIN, Bank Information, etc.), business secrets, proprietary information, API keys, secrets, passwords, etc. in your task_summary. You can mask as much as you can but do not disclose any sensitive information.
         """
         system_prompt += (
             f"\nHere is the overall context of this request:\n\n{context_info}"
