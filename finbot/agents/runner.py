@@ -6,8 +6,11 @@ import secrets
 from typing import Type
 
 from finbot.agents.base import BaseAgent
+from finbot.agents.specialized.communication import CommunicationAgent
+from finbot.agents.specialized.fraud import FraudComplianceAgent
 from finbot.agents.specialized.invoice import InvoiceAgent
 from finbot.agents.specialized.onboarding import VendorOnboardingAgent
+from finbot.agents.specialized.payments import PaymentsAgent
 from finbot.core.auth.session import SessionContext
 from finbot.core.messaging import event_bus
 
@@ -142,6 +145,69 @@ async def run_invoice_agent(
     """
     return await run_agent_with_retry(
         agent_class=InvoiceAgent,
+        session_context=session_context,
+        task_data=task_data,
+        workflow_id=workflow_id,
+    )
+
+
+async def run_payments_agent(
+    task_data: dict,
+    session_context: SessionContext,
+    workflow_id: str | None = None,
+) -> dict:
+    """Run the payments agent for payment processing
+    Args:
+        task_data: The task data to pass on to the agent
+        session_context: The session context from the request
+        workflow_id: Optional workflow id
+    Returns:
+        Agent execution result
+    """
+    return await run_agent_with_retry(
+        agent_class=PaymentsAgent,
+        session_context=session_context,
+        task_data=task_data,
+        workflow_id=workflow_id,
+    )
+
+
+async def run_fraud_agent(
+    task_data: dict,
+    session_context: SessionContext,
+    workflow_id: str | None = None,
+) -> dict:
+    """Run the fraud/compliance agent for risk assessment
+    Args:
+        task_data: The task data to pass on to the agent
+        session_context: The session context from the request
+        workflow_id: Optional workflow id
+    Returns:
+        Agent execution result
+    """
+    return await run_agent_with_retry(
+        agent_class=FraudComplianceAgent,
+        session_context=session_context,
+        task_data=task_data,
+        workflow_id=workflow_id,
+    )
+
+
+async def run_communication_agent(
+    task_data: dict,
+    session_context: SessionContext,
+    workflow_id: str | None = None,
+) -> dict:
+    """Run the communication agent for sending notifications
+    Args:
+        task_data: The task data to pass on to the agent
+        session_context: The session context from the request
+        workflow_id: Optional workflow id
+    Returns:
+        Agent execution result
+    """
+    return await run_agent_with_retry(
+        agent_class=CommunicationAgent,
         session_context=session_context,
         task_data=task_data,
         workflow_id=workflow_id,
