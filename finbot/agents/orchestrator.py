@@ -21,12 +21,15 @@ logger = logging.getLogger(__name__)
 class OrchestratorAgent(BaseAgent):
     """LLM-powered orchestrator that coordinates specialized agents."""
 
+    _max_delegation_attempts: int = 2
+
     def __init__(self, session_context: SessionContext, workflow_id: str | None = None):
         super().__init__(
             session_context=session_context,
             workflow_id=workflow_id,
             agent_name="orchestrator_agent",
         )
+        self._delegation_attempts: dict[str, int] = {}
 
         logger.info(
             "Orchestrator initialized for user=%s, namespace=%s, workflow=%s",
@@ -70,58 +73,69 @@ class OrchestratorAgent(BaseAgent):
         AVAILABLE AGENTS:
 
         1. **Onboarding Agent** (delegate_to_onboarding)
-           - Evaluates new vendors: compliance checks, risk assessment, trust level
+           - Evaluates vendor profiles: compliance, risk assessment, trust level
            - Sets vendor status to active/inactive/pending
-           - Use when: a vendor registers, or needs re-evaluation
 
         2. **Invoice Agent** (delegate_to_invoice)
            - Processes invoices: approval/rejection based on business rules
            - Updates invoice status and adds processing notes
-           - Use when: an invoice is submitted or needs re-processing
 
         3. **Fraud Agent** (delegate_to_fraud)
            - Assesses vendor risk levels and flags suspicious invoices
            - Updates risk levels, flags invoices for review
-           - Use when: risk assessment is needed or suspicious activity detected
 
         4. **Payments Agent** (delegate_to_payments)
            - Processes payments for approved invoices
            - Handles payment method selection and execution
-           - Use when: an approved invoice needs payment processing
 
         5. **Communication Agent** (delegate_to_communication)
            - Sends notifications to vendors (email/system messages)
            - Composes professional messages about status updates, decisions, alerts
-           - Use when: a vendor needs to be informed about any decision or status change
+
+        WORKFLOW RECIPES (follow the matching recipe step-by-step):
+
+        **Vendor Onboarding** (task mentions new vendor registration):
+          Step 1: delegate_to_onboarding -- evaluate and set vendor status, trust level, risk level
+          Step 2: delegate_to_fraud -- assess initial risk profile for the new vendor; pass the onboarding outcome in the task description
+          Step 3: delegate_to_communication -- notify the vendor of the onboarding decision; include outcomes from steps 1 and 2
+
+        **Vendor Re-Review** (task mentions vendor re-review or re-evaluation):
+          Step 1: delegate_to_onboarding -- re-evaluate the vendor profile
+          Step 2: delegate_to_fraud -- re-assess risk with the updated profile; pass the re-evaluation outcome
+          Step 3: delegate_to_communication -- notify the vendor of the updated decision
+
+        **Invoice Processing** (task mentions new invoice submitted):
+          Step 1: delegate_to_invoice -- evaluate and approve/reject the invoice
+          Step 2: delegate_to_fraud -- check the invoice for fraud patterns; pass the invoice decision
+          Step 3: If the invoice was approved in step 1, delegate_to_payments -- process payment for the approved invoice
+          Step 4: delegate_to_communication -- notify the vendor of the invoice decision and payment status if applicable
+
+        **Invoice Reprocessing** (task mentions invoice re-processing or re-evaluation):
+          Step 1: delegate_to_invoice -- re-evaluate the invoice
+          Step 2: delegate_to_fraud -- re-check for fraud patterns; pass the invoice decision
+          Step 3: If the invoice was approved in step 1, delegate_to_payments -- process payment
+          Step 4: delegate_to_communication -- notify the vendor of the updated decision
 
         IMPORTANT WORKFLOW RULES (MUST BE FOLLOWED STRICTLY):
 
-        1. **Always notify vendors**: After any business decision that affects a vendor
-           (onboarding decision, invoice decision, risk update, payment), you MUST delegate
-           to the communication agent to notify the vendor. Include the decision outcome
-           in the task description so the communication agent composes an appropriate message.
+        1. **Follow the recipe**: Identify the matching workflow recipe from the task description
+           and execute ALL steps in order. Do not skip steps unless a previous step failed
+           and the subsequent step depends on its success.
 
         2. **Pass context forward**: When chaining agents, include relevant IDs and the
-           outcome of previous steps. For example, after onboarding approves a vendor,
-           tell the communication agent: "Vendor was approved with standard trust level.
-           Send a welcome notification."
+           outcome of previous steps in the task_description. For example, after onboarding
+           approves a vendor, tell the fraud agent: "Vendor was approved with standard trust
+           level. Assess initial risk profile."
 
         3. **One agent at a time**: Delegate to one agent, wait for the result, then
-           decide the next step. Do not try to call multiple agents simultaneously.
+           proceed to the next step. Do not try to call multiple agents simultaneously.
 
-        4. **Handle failures gracefully**: If a sub-agent fails, decide whether to retry,
-           skip the step, or report the failure. Always notify the vendor if a failure
-           affects them.
+        4. **Handle failures gracefully**: If a sub-agent fails, skip steps that depend
+           on its success and continue with remaining steps. Always notify the vendor
+           via the communication agent, even if earlier steps failed.
 
-        5. **Synthesize results**: When completing the task, provide a concise summary
-           of all actions taken and their outcomes.
-
-        DECISION FRAMEWORK:
-        - Read the task description carefully to understand the goal
-        - Identify which agent(s) need to be involved
-        - Plan the execution order (business logic first, then communication)
-        - Execute step by step, reviewing each result before proceeding
-        - After all steps, call complete_task with a synthesized summary
+        5. **Synthesize results**: After all steps, call complete_task with a concise
+           summary of all actions taken and their outcomes.
         """
 
         if self.agent_config.get("custom_goals"):
@@ -285,11 +299,35 @@ class OrchestratorAgent(BaseAgent):
     # Delegate callables
     # =====================================================================
 
+    def _check_delegation_limit(self, agent_key: str) -> dict[str, Any] | None:
+        """Track delegation attempts and return a failure result if the cap is reached."""
+        self._delegation_attempts[agent_key] = (
+            self._delegation_attempts.get(agent_key, 0) + 1
+        )
+        attempt = self._delegation_attempts[agent_key]
+        if attempt > self._max_delegation_attempts:
+            logger.warning(
+                "Delegation cap reached for %s: %d/%d attempts",
+                agent_key,
+                attempt,
+                self._max_delegation_attempts,
+            )
+            return {
+                "task_status": "failed",
+                "task_summary": (
+                    f"Maximum delegation attempts ({self._max_delegation_attempts}) "
+                    f"reached for {agent_key}. Moving on to the next step."
+                ),
+            }
+        return None
+
     @agent_tool
     async def delegate_to_onboarding(
         self, vendor_id: int, task_description: str
     ) -> dict[str, Any]:
         """Delegate to the Vendor Onboarding Agent."""
+        if cap_result := self._check_delegation_limit("onboarding"):
+            return cap_result
         logger.info("Orchestrator delegating to onboarding: vendor_id=%s", vendor_id)
         # pylint: disable=import-outside-toplevel
         from finbot.agents.runner import run_onboarding_agent
@@ -311,6 +349,8 @@ class OrchestratorAgent(BaseAgent):
         self, invoice_id: int, task_description: str
     ) -> dict[str, Any]:
         """Delegate to the Invoice Processing Agent."""
+        if cap_result := self._check_delegation_limit("invoice"):
+            return cap_result
         logger.info("Orchestrator delegating to invoice: invoice_id=%s", invoice_id)
         # pylint: disable=import-outside-toplevel
         from finbot.agents.runner import run_invoice_agent
@@ -332,6 +372,8 @@ class OrchestratorAgent(BaseAgent):
         self, vendor_id: int, task_description: str
     ) -> dict[str, Any]:
         """Delegate to the Fraud/Compliance Agent."""
+        if cap_result := self._check_delegation_limit("fraud"):
+            return cap_result
         logger.info("Orchestrator delegating to fraud: vendor_id=%s", vendor_id)
         # pylint: disable=import-outside-toplevel
         from finbot.agents.runner import run_fraud_agent
@@ -353,6 +395,8 @@ class OrchestratorAgent(BaseAgent):
         self, invoice_id: int, task_description: str
     ) -> dict[str, Any]:
         """Delegate to the Payments Agent."""
+        if cap_result := self._check_delegation_limit("payments"):
+            return cap_result
         logger.info("Orchestrator delegating to payments: invoice_id=%s", invoice_id)
         # pylint: disable=import-outside-toplevel
         from finbot.agents.runner import run_payments_agent
@@ -377,6 +421,8 @@ class OrchestratorAgent(BaseAgent):
         notification_type: str,
     ) -> dict[str, Any]:
         """Delegate to the Communication Agent."""
+        if cap_result := self._check_delegation_limit("communication"):
+            return cap_result
         logger.info(
             "Orchestrator delegating to communication: vendor_id=%s, type=%s",
             vendor_id,
