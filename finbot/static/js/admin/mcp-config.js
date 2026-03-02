@@ -2,6 +2,40 @@
  * FinBot Admin Portal - MCP Server Configuration & Tool Definition Editor
  */
 
+// Inline fallback if utils.js hasn't been refreshed with showConfirmModal yet
+if (typeof showConfirmModal !== 'function') {
+    window.showConfirmModal = function({ title = 'Confirm', message = 'Are you sure?', confirmText = 'Confirm', cancelText = 'Cancel', danger = false } = {}) {
+        return new Promise((resolve) => {
+            const existing = document.getElementById('confirm-modal');
+            if (existing) existing.remove();
+
+            const modal = document.createElement('div');
+            modal.id = 'confirm-modal';
+            modal.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);padding:1rem;';
+
+            const c = danger ? ['#ef4444','rgba(239,68,68,'] : ['#f59e0b','rgba(245,158,11,'];
+            modal.innerHTML = `
+                <div style="background:#151520;border:1px solid rgba(255,255,255,0.1);border-radius:0.75rem;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);max-width:28rem;width:100%;overflow:hidden;">
+                    <div style="padding:1rem 1.5rem;border-bottom:1px solid rgba(255,255,255,0.05);"><h3 style="font-size:1.125rem;font-weight:700;color:#fff;margin:0;">${title}</h3></div>
+                    <div style="padding:1.25rem 1.5rem;"><p style="font-size:0.875rem;color:#94a3b8;line-height:1.625;margin:0;">${message}</p></div>
+                    <div style="padding:1rem 1.5rem;border-top:1px solid rgba(255,255,255,0.05);display:flex;justify-content:flex-end;gap:0.75rem;">
+                        <button id="confirm-modal-cancel" style="font-size:0.875rem;padding:0.5rem 1rem;border-radius:0.5rem;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#94a3b8;cursor:pointer;">${cancelText}</button>
+                        <button id="confirm-modal-confirm" style="font-size:0.875rem;padding:0.5rem 1rem;border-radius:0.5rem;border:1px solid ${c[1]}0.3);background:${c[1]}0.2);color:${c[0]};cursor:pointer;font-weight:500;">${confirmText}</button>
+                    </div>
+                </div>`;
+
+            const cleanup = (result) => { modal.remove(); document.removeEventListener('keydown', esc); resolve(result); };
+            const esc = (e) => { if (e.key === 'Escape') cleanup(false); };
+            document.body.appendChild(modal);
+            document.addEventListener('keydown', esc);
+            modal.addEventListener('click', (e) => { if (e.target === modal) cleanup(false); });
+            modal.querySelector('#confirm-modal-cancel').addEventListener('click', () => cleanup(false));
+            modal.querySelector('#confirm-modal-confirm').addEventListener('click', () => cleanup(true));
+            modal.querySelector('#confirm-modal-cancel').focus();
+        });
+    };
+}
+
 let serverData = null;
 let pendingOverrides = {};
 
@@ -159,7 +193,12 @@ function attachConfigHandlers(serverType) {
     // Reset all tools
     const resetAllBtn = document.getElementById('reset-all-tools-btn');
     if (resetAllBtn) {
-        resetAllBtn.addEventListener('click', () => resetAllTools(serverType));
+        resetAllBtn.addEventListener('click', () => {
+            resetAllTools(serverType).catch(err => {
+                console.error('Reset all tools error:', err);
+                showNotification('An unexpected error occurred.', 'error');
+            });
+        });
     }
 
     // Individual tool reset buttons
@@ -215,10 +254,10 @@ async function saveConfig(serverType) {
             body: JSON.stringify({ config }),
         });
         if (!response.ok) throw new Error('Save failed');
-        alert('Server settings saved successfully.');
+        showNotification('Server settings saved successfully.', 'success');
     } catch (error) {
         console.error('Error saving config:', error);
-        alert('Failed to save settings. Please try again.');
+        showNotification('Failed to save settings. Please try again.', 'error');
     }
 }
 
@@ -234,16 +273,23 @@ async function saveToolOverrides(serverType) {
             body: JSON.stringify({ tool_overrides: pendingOverrides }),
         });
         if (!response.ok) throw new Error('Save failed');
-        alert('Tool overrides saved. Changes take effect on the next agent run.');
+        showNotification('Tool overrides saved. Changes take effect on the next agent run.', 'success');
         await loadServerConfig(serverType);
     } catch (error) {
         console.error('Error saving tool overrides:', error);
-        alert('Failed to save tool overrides. Please try again.');
+        showNotification('Failed to save tool overrides. Please try again.', 'error');
     }
 }
 
 async function resetAllTools(serverType) {
-    if (!confirm('Reset all tool definitions to defaults? This removes all your modifications.')) return;
+    const confirmed = await showConfirmModal({
+        title: 'Reset Tool Definitions',
+        message: 'Reset all tool definitions to defaults? This removes all your modifications.',
+        confirmText: 'Reset All',
+        cancelText: 'Cancel',
+        danger: true,
+    });
+    if (!confirmed) return;
 
     try {
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
@@ -256,11 +302,11 @@ async function resetAllTools(serverType) {
         });
         if (!response.ok) throw new Error('Reset failed');
         pendingOverrides = {};
-        alert('Tool definitions reset to defaults.');
+        showNotification('Tool definitions reset to defaults.', 'success');
         await loadServerConfig(serverType);
     } catch (error) {
         console.error('Error resetting tools:', error);
-        alert('Failed to reset tools. Please try again.');
+        showNotification('Failed to reset tools. Please try again.', 'error');
     }
 }
 

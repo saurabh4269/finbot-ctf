@@ -103,9 +103,10 @@ async function toggleServer(serverType) {
         });
         if (!response.ok) throw new Error('Toggle failed');
         await loadMCPServers();
+        showNotification('Server toggled successfully.', 'success');
     } catch (error) {
         console.error('Error toggling server:', error);
-        alert('Failed to toggle server. Please try again.');
+        showNotification('Failed to toggle server. Please try again.', 'error');
     }
 }
 
