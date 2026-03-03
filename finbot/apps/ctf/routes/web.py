@@ -3,7 +3,10 @@
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-from finbot.core.auth.middleware import get_session_context
+from finbot.core.auth.middleware import (
+    get_authenticated_session_context,
+    get_session_context,
+)
 from finbot.core.auth.session import SessionContext
 from finbot.core.templates import TemplateResponse
 
@@ -84,4 +87,34 @@ async def ctf_badges(
         request,
         "pages/badges.html",
         {"session_context": session_context},
+    )
+
+
+@router.get("/profile/settings", response_class=HTMLResponse, name="ctf_profile_settings")
+async def ctf_profile_settings(
+    request: Request,
+    session_context: SessionContext = Depends(get_authenticated_session_context),
+):
+    """Profile settings page - requires authenticated session"""
+    return template_response(
+        request,
+        "pages/profile_settings.html",
+        {"session_context": session_context},
+    )
+
+
+@router.get("/h/{username}", response_class=HTMLResponse, name="ctf_public_profile")
+async def ctf_public_profile(
+    request: Request,
+    username: str,
+    session_context: SessionContext = Depends(get_session_context),
+):
+    """Public profile page - viewable by anyone"""
+    return template_response(
+        request,
+        "pages/public_profile.html",
+        {
+            "username": username,
+            "session_context": session_context,
+        },
     )

@@ -129,7 +129,7 @@
             <div class="p-6 border-t border-ctf-primary/20">
                 {% if session_context and session_context.email %}
                 <!-- Signed In User -->
-                <div class="flex items-center justify-between">
+                <div class="flex items-center justify-between mb-3">
                     <div class="flex items-center space-x-3">
                         <div class="w-10 h-10 rounded-full bg-gradient-to-r from-ctf-accent to-ctf-primary flex items-center justify-center text-sm font-bold text-portal-bg-primary">
                             {{ session_context.email[0]|upper }}
@@ -145,6 +145,13 @@
                         </svg>
                     </a>
                 </div>
+                <!-- Profile Settings Link -->
+                <a href="/ctf/profile/settings" class="flex items-center gap-2 px-3 py-2 rounded-lg bg-portal-bg-tertiary/50 border border-ctf-primary/10 text-text-secondary hover:text-ctf-primary hover:border-ctf-primary/30 transition-colors text-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                    </svg>
+                    <span>Profile Settings</span>
+                </a>
                 {% else %}
                 <!-- Guest User -->
                 <div class="flex items-center space-x-3 mb-4">

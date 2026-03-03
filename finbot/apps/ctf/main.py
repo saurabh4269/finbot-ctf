@@ -7,6 +7,7 @@ from finbot.apps.ctf.routes import (
     admin,
     badges,
     challenges,
+    profile,
     sidecar,
     stats,
     web_router,
@@ -28,3 +29,4 @@ ctf_app.include_router(activity.router)
 ctf_app.include_router(stats.router)
 ctf_app.include_router(admin.router)
 ctf_app.include_router(sidecar.router)
+ctf_app.include_router(profile.router)
