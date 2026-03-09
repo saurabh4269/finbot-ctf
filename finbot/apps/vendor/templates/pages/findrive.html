@@ -1,20 +1,20 @@
 {% extends 'base.html' %}
 
-{% block title %}Files - FinBot Vendor Portal{% endblock %}
+{% block title %}FinDrive - FinBot Vendor Portal{% endblock %}
 
-{% block meta_description %}Manage your invoice documents and files stored in FinDrive.{% endblock %}
+{% block meta_description %}Create and manage invoice PDF documents stored in FinDrive.{% endblock %}
 
-{% block nav_profile %}{% endblock %}
+{% block nav_findrive %}active{% endblock %}
 
 {% block page_title %}FinDrive{% endblock %}
-{% block page_subtitle %}Manage invoice PDFs and supporting documents{% endblock %}
+{% block page_subtitle %}Invoice PDF Generator{% endblock %}
 
 {% block header_actions %}
 <button id="create-file-btn" class="vendor-btn quantum-accent">
     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
     </svg>
-    New File
+    New Invoice
 </button>
 <a href="/vendor/assistant" class="vendor-btn quantum-primary">
     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -25,7 +25,7 @@
 {% endblock %}
 
 {% block content %}
-<!-- File Stats -->
+<!-- Stats -->
 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
     <div class="neural-metric" data-no-animate>
         <div class="metric-icon">
@@ -34,9 +34,8 @@
             </svg>
         </div>
         <div id="stat-file-count" class="metric-value">0</div>
-        <div class="metric-label">Documents</div>
+        <div class="metric-label">Invoices</div>
     </div>
-
     <div class="neural-metric" data-no-animate>
         <div class="metric-icon">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -46,7 +45,6 @@
         <div id="stat-storage-provider" class="metric-value text-lg">FinDrive</div>
         <div class="metric-label">Storage Provider</div>
     </div>
-
     <div class="neural-metric" data-no-animate>
         <div class="metric-icon">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -58,107 +56,463 @@
     </div>
 </div>
 
-<!-- File List -->
-<div class="holo-card">
-    <div class="holo-header">
-        <h2 class="text-xl font-bold text-text-bright">Documents</h2>
-    </div>
-    <div class="holo-body">
-        <div id="files-list" class="space-y-3">
-            <div class="flex items-center justify-center py-8">
+<!-- Drive File Explorer -->
+<div class="drive-container">
+    <div class="drive-main">
+        <div class="drive-toolbar">
+            <h2 class="text-sm font-semibold text-text-bright">My Invoices</h2>
+        </div>
+        <div id="drive-grid" class="drive-grid">
+            <div class="col-span-full flex items-center justify-center py-12">
                 <svg class="animate-spin h-5 w-5 text-vendor-primary" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                <span class="ml-3 text-text-secondary">Loading files...</span>
+                <span class="ml-3 text-text-secondary">Loading invoices...</span>
             </div>
         </div>
-
-        <div id="files-empty-state" class="hidden text-center py-12">
-            <svg class="w-16 h-16 mx-auto text-text-secondary mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+        <div id="files-empty-state" class="hidden text-center py-16">
+            <svg class="w-20 h-20 mx-auto text-text-secondary/40 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
             </svg>
-            <h3 class="text-lg font-medium text-text-bright mb-2">No documents yet</h3>
-            <p class="text-text-secondary mb-4">Upload your first invoice PDF to get started</p>
+            <h3 class="text-lg font-medium text-text-bright mb-2">No invoices yet</h3>
+            <p class="text-text-secondary mb-4">Create your first invoice PDF to get started</p>
         </div>
+    </div>
+    <div id="drive-sidecar" class="drive-sidecar hidden"></div>
+</div>
+
+<!-- ================================================================ -->
+<!-- INVOICE EDITOR MODAL                                             -->
+<!-- ================================================================ -->
+<div id="invoice-editor-modal" class="fixed inset-0 z-50 hidden flex flex-col bg-portal-bg-primary">
+    <div class="inv-toolbar">
+        <div class="flex items-center gap-3">
+            <button id="close-editor-btn" class="inv-toolbar-icon" title="Close">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+            <span id="editor-title" class="text-sm font-semibold text-white">New Invoice</span>
+        </div>
+        <div class="flex items-center gap-3">
+            <div class="inv-filename-wrap">
+                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                </svg>
+                <input type="text" id="editor-filename" class="inv-filename-input" placeholder="invoice.pdf" value="invoice.pdf">
+            </div>
+            <button id="cancel-editor-btn" class="inv-toolbar-btn inv-toolbar-btn-secondary">Cancel</button>
+            <button id="save-invoice-btn" class="inv-toolbar-btn inv-toolbar-btn-primary">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                Save Invoice
+            </button>
+        </div>
+    </div>
+    <div class="inv-viewport">
+        <div id="invoice-editor-paper" class="invoice-paper"></div>
     </div>
 </div>
 
-<!-- Create/Edit File Modal -->
-<div id="file-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-portal-bg-secondary border border-vendor-primary/30 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden">
-        <div class="p-6 border-b border-vendor-primary/20">
-            <div class="flex items-center justify-between">
-                <h3 id="file-modal-title" class="text-xl font-bold text-text-bright">New Document</h3>
-                <button id="close-file-modal-btn" class="text-text-secondary hover:text-text-bright transition-colors">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                </button>
-            </div>
+<!-- ================================================================ -->
+<!-- INVOICE VIEWER MODAL                                             -->
+<!-- ================================================================ -->
+<div id="invoice-viewer-modal" class="fixed inset-0 z-50 hidden flex flex-col bg-portal-bg-primary">
+    <div class="inv-toolbar">
+        <div class="flex items-center gap-3">
+            <button id="close-viewer-btn" class="inv-toolbar-icon" title="Close">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+            <svg class="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+            </svg>
+            <span id="viewer-title" class="text-sm font-semibold text-white">invoice.pdf</span>
         </div>
-        <div class="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-            <form id="file-form" class="space-y-4">
-                {{ csrf_token_field | safe }}
-                <input type="hidden" id="file-edit-id" value="">
-
-                <div class="vendor-form-group">
-                    <label for="file-name" class="vendor-label">Document Name <span class="text-vendor-danger">*</span></label>
-                    <input type="text" id="file-name" class="vendor-input" placeholder="invoice-2026-001.pdf" required>
-                </div>
-
-                <div class="vendor-form-group">
-                    <label for="file-content" class="vendor-label">Document Content <span class="text-vendor-danger">*</span></label>
-                    <p class="text-xs text-text-secondary mb-2">Paste the text content of your PDF document</p>
-                    <textarea id="file-content" rows="14" class="vendor-input resize-none font-mono text-sm" placeholder="Enter document content..." required></textarea>
-                </div>
-
-                <div class="flex items-center justify-end space-x-4 pt-4 border-t border-vendor-primary/20">
-                    <button type="button" id="cancel-file-btn" class="vendor-btn quantum-secondary">Cancel</button>
-                    <button type="submit" id="submit-file-btn" class="vendor-btn quantum-accent">
-                        <span id="submit-file-text">Create File</span>
-                    </button>
-                </div>
-            </form>
+        <div class="flex items-center gap-3">
+            <button id="viewer-edit-btn" class="inv-toolbar-btn inv-toolbar-btn-secondary" data-file-id="" onclick="editFromViewer()">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                </svg>
+                Edit
+            </button>
         </div>
     </div>
-</div>
-
-<!-- File View Modal -->
-<div id="file-view-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-portal-bg-secondary border border-vendor-primary/30 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden">
-        <div class="p-6 border-b border-vendor-primary/20">
-            <div class="flex items-center justify-between">
-                <h3 id="file-view-title" class="text-xl font-bold text-text-bright">File</h3>
-                <button id="close-file-view-btn" class="text-text-secondary hover:text-text-bright transition-colors">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                </button>
-            </div>
-        </div>
-        <div class="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-            <pre id="file-view-content" class="text-sm text-text-primary font-mono whitespace-pre-wrap break-words bg-portal-bg-primary rounded-lg p-4 border border-vendor-primary/10"></pre>
-        </div>
+    <div class="inv-viewport">
+        <div id="invoice-viewer-paper" class="invoice-paper"></div>
     </div>
 </div>
 {% endblock %}
 
 {% block extra_css %}
 <style>
-.file-row {
+/* ================================================================
+   DRIVE FILE EXPLORER
+   ================================================================ */
+.drive-container {
+    display: flex;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px;
+    overflow: hidden;
+    min-height: 420px;
+}
+.drive-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+.drive-toolbar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.75rem 1rem;
-    border-radius: 0.75rem;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    background: rgba(255, 255, 255, 0.02);
-    transition: border-color 0.2s, background 0.2s;
+    padding: 12px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
 }
-.file-row:hover {
-    border-color: rgba(0, 212, 255, 0.2);
-    background: rgba(0, 212, 255, 0.03);
+.drive-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+    gap: 4px;
+    padding: 12px;
+    flex: 1;
+    align-content: start;
+}
+
+/* File card */
+.drive-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 18px 10px 14px;
+    border-radius: 10px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+    user-select: none;
+}
+.drive-card:hover {
+    background: rgba(0,212,255,0.04);
+    border-color: rgba(0,212,255,0.1);
+}
+.drive-card-selected {
+    background: rgba(0,212,255,0.08) !important;
+    border-color: rgba(0,212,255,0.3) !important;
+}
+.drive-card-icon {
+    margin-bottom: 10px;
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.3));
+}
+.drive-card-name {
+    font-size: 12px;
+    color: #e2e8f0;
+    text-align: center;
+    word-break: break-word;
+    line-height: 1.4;
+    max-height: 2.8em;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+.drive-card-date {
+    font-size: 10px;
+    color: #64748b;
+    margin-top: 4px;
+}
+
+/* ================================================================
+   SIDECAR DETAIL PANEL
+   ================================================================ */
+.drive-sidecar {
+    width: 280px;
+    flex-shrink: 0;
+    border-left: 1px solid rgba(255,255,255,0.06);
+    background: rgba(255,255,255,0.02);
+    overflow-y: auto;
+}
+.sc-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.sc-header-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #e2e8f0;
+}
+.sc-close-btn {
+    padding: 4px; border-radius: 6px; border: none;
+    background: none; color: #64748b; cursor: pointer;
+    transition: all 0.15s;
+}
+.sc-close-btn:hover { color: #e2e8f0; background: rgba(255,255,255,0.08); }
+.sc-icon {
+    display: flex;
+    justify-content: center;
+    padding: 24px 16px 8px;
+    filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));
+}
+.sc-filename {
+    font-size: 13px;
+    font-weight: 600;
+    color: #e2e8f0;
+    text-align: center;
+    padding: 0 16px 16px;
+    word-break: break-word;
+    line-height: 1.4;
+}
+.sc-meta {
+    padding: 0 16px 16px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    padding-top: 16px;
+}
+.sc-meta-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    font-size: 12px;
+}
+.sc-meta-row > span:first-child { color: #64748b; }
+.sc-meta-row > span:last-child { color: #cbd5e1; }
+.sc-actions {
+    padding: 8px 16px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.sc-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.04);
+    color: #cbd5e1;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.sc-btn:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); }
+.sc-btn-primary {
+    background: rgba(0,212,255,0.1);
+    border-color: rgba(0,212,255,0.25);
+    color: #00d4ff;
+}
+.sc-btn-primary:hover { background: rgba(0,212,255,0.18); }
+.sc-btn-danger:hover { background: rgba(239,68,68,0.12); border-color: rgba(239,68,68,0.3); color: #f87171; }
+
+/* ================================================================
+   TOOLBAR (editor + viewer)
+   ================================================================ */
+.inv-toolbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 20px;
+    background: #1e293b; border-bottom: 1px solid #334155;
+    flex-shrink: 0; z-index: 10;
+}
+.inv-toolbar-icon {
+    padding: 6px; border-radius: 6px; border: none;
+    background: none; color: #94a3b8; cursor: pointer; transition: all 0.15s;
+}
+.inv-toolbar-icon:hover { color: #fff; background: rgba(255,255,255,0.1); }
+.inv-toolbar-btn {
+    display: flex; align-items: center; gap: 6px;
+    padding: 7px 16px; border-radius: 6px; border: none;
+    font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s;
+}
+.inv-toolbar-btn-secondary {
+    background: rgba(255,255,255,0.08); color: #e2e8f0;
+}
+.inv-toolbar-btn-secondary:hover { background: rgba(255,255,255,0.15); }
+.inv-toolbar-btn-primary {
+    background: #06ffa5; color: #0a0a0f;
+}
+.inv-toolbar-btn-primary:hover { background: #00e694; }
+.inv-filename-wrap {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,0.06); border: 1px solid #334155;
+    border-radius: 6px; padding: 4px 10px;
+}
+.inv-filename-input {
+    background: none; border: none; outline: none;
+    color: #e2e8f0; font-size: 13px; width: 200px;
+    font-family: ui-monospace, monospace;
+}
+
+/* ================================================================
+   PAPER VIEWPORT
+   ================================================================ */
+.inv-viewport {
+    flex: 1; overflow: auto;
+    background: #374151;
+    padding: 32px 16px;
+}
+
+/* ================================================================
+   INVOICE PAPER
+   ================================================================ */
+.invoice-paper {
+    background: #ffffff; color: #1e293b;
+    max-width: 816px; margin: 0 auto;
+    padding: 56px 64px;
+    box-shadow: 0 4px 32px rgba(0,0,0,0.35), 0 0 0 1px rgba(0,0,0,0.08);
+    border-radius: 2px;
+    min-height: 900px;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 13px; line-height: 1.5;
+}
+.inv-header {
+    display: flex; justify-content: space-between; gap: 32px;
+    margin-bottom: 36px;
+}
+.inv-from-block { flex: 1; }
+.inv-meta-block { flex: 0 0 260px; text-align: right; }
+.inv-doc-title {
+    font-size: 38px; font-weight: 800; color: #1e293b;
+    letter-spacing: -1px; margin-bottom: 16px; line-height: 1;
+}
+.inv-meta-grid {
+    display: grid; grid-template-columns: auto 1fr;
+    gap: 4px 12px; text-align: left;
+}
+.inv-meta-grid label {
+    font-size: 11px; font-weight: 600; color: #64748b;
+    padding: 4px 0; white-space: nowrap;
+}
+
+/* Inputs on paper */
+.inv-input {
+    background: transparent; border: none;
+    border-bottom: 1.5px solid transparent;
+    outline: none; font-family: inherit; font-size: inherit;
+    color: #1e293b; padding: 3px 4px; width: 100%;
+    transition: border-color 0.15s, background 0.15s;
+    border-radius: 2px;
+}
+.inv-input:hover { border-bottom-color: #e2e8f0; }
+.inv-input:focus { border-bottom-color: #3b82f6; background: #f1f5f9; }
+.inv-input::placeholder { color: #cbd5e1; font-style: italic; }
+.inv-input-company { font-size: 15px; font-weight: 600; }
+.inv-input-meta { text-align: right; }
+.inv-input-tax {
+    width: 52px; text-align: center; display: inline-block;
+    border-bottom-color: #e2e8f0; font-size: 12px;
+}
+.inv-input-notes {
+    min-height: 72px; resize: vertical;
+    border: 1.5px solid #e2e8f0; border-radius: 6px;
+    padding: 10px 12px; line-height: 1.6;
+}
+.inv-input-notes:focus { border-color: #3b82f6; }
+
+/* Bill To */
+.inv-billto { margin-bottom: 28px; }
+.inv-label {
+    font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
+    color: #64748b; margin-bottom: 6px; text-transform: uppercase;
+}
+
+/* Items table */
+.inv-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
+.inv-table thead { background: #1e293b; color: #fff; }
+.inv-table th {
+    padding: 9px 12px; font-size: 10px; font-weight: 700;
+    letter-spacing: 0.6px; text-transform: uppercase; text-align: left;
+}
+.inv-th-num { text-align: right; width: 90px; }
+.inv-th-act { width: 32px; }
+.inv-row td {
+    padding: 6px 10px; border-bottom: 1px solid #e2e8f0;
+    vertical-align: middle;
+}
+.inv-item-desc { font-size: 13px; }
+.inv-item-qty, .inv-item-rate { text-align: right; width: 70px; }
+.inv-item-amt { text-align: right; font-weight: 500; color: #1e293b; padding: 6px 12px; }
+.inv-remove-btn {
+    background: none; border: none; color: #cbd5e1;
+    cursor: pointer; padding: 4px; border-radius: 4px;
+    transition: color 0.15s, background 0.15s;
+}
+.inv-remove-btn:hover { color: #ef4444; background: #fef2f2; }
+
+/* View-mode table */
+.inv-table-view td {
+    padding: 10px 12px; border-bottom: 1px solid #e2e8f0;
+    font-size: 13px; color: #334155;
+}
+.inv-table-view tr:last-child td { border-bottom: none; }
+
+/* Add item */
+.inv-add-btn {
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 16px; margin-top: 6px; margin-bottom: 24px;
+    background: none; border: 1.5px dashed #d1d5db;
+    border-radius: 6px; color: #64748b;
+    font-size: 13px; font-weight: 500; cursor: pointer;
+    transition: all 0.15s;
+}
+.inv-add-btn:hover { border-color: #3b82f6; color: #3b82f6; background: #eff6ff; }
+
+/* Totals */
+.inv-totals-block {
+    display: flex; flex-direction: column; align-items: flex-end;
+    margin-bottom: 28px;
+}
+.inv-totals-row {
+    display: flex; justify-content: space-between;
+    width: 260px; padding: 5px 0;
+    font-size: 13px; color: #475569;
+}
+.inv-totals-total {
+    border-top: 2px solid #1e293b; margin-top: 6px;
+    padding-top: 10px; font-size: 18px; font-weight: 700; color: #1e293b;
+}
+.inv-notes-block { margin-bottom: 24px; }
+
+/* View-mode text */
+.inv-view-company { font-size: 15px; font-weight: 600; color: #1e293b; margin-bottom: 2px; }
+.inv-view-line { font-size: 13px; color: #475569; line-height: 1.6; }
+.inv-view-empty { color: #cbd5e1; font-style: italic; }
+.inv-view-meta { margin-top: 16px; }
+.inv-view-meta > div {
+    display: flex; justify-content: space-between; padding: 3px 0; font-size: 13px;
+}
+.inv-view-meta > div > span:first-child { color: #64748b; font-weight: 600; }
+.inv-view-meta > div > span:last-child { color: #1e293b; }
+.inv-view-notes { font-size: 13px; color: #475569; line-height: 1.6; white-space: pre-wrap; }
+.inv-view-totals .inv-totals-total { color: #1e293b; }
+
+/* Footer */
+.inv-footer-line {
+    border-top: 1px solid #e2e8f0; margin-top: 32px; margin-bottom: 8px;
+}
+.inv-footer-text {
+    text-align: center; font-size: 10px; color: #94a3b8;
+    letter-spacing: 0.3px;
+}
+
+/* ================================================================
+   RESPONSIVE
+   ================================================================ */
+@media (max-width: 768px) {
+    .inv-header { flex-direction: column; gap: 16px; }
+    .inv-meta-block { flex: auto; text-align: left; }
+    .inv-doc-title { text-align: left; font-size: 28px; }
+    .inv-input-meta { text-align: left; }
+    .invoice-paper { padding: 32px 24px; }
+    .inv-totals-row { width: 100%; }
+    .inv-filename-input { width: 140px; }
+    .drive-sidecar { display: none; }
+    .drive-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
 }
 </style>
 {% endblock %}
