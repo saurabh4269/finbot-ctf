@@ -156,7 +156,7 @@
     margin-top: -10px;
   }
 
-  /* Badge circle */
+  /* Badge display */
   .badge-container {
     position: relative;
     margin-bottom: 20px;
@@ -200,6 +200,34 @@
     color: var(--rarity-color);
     line-height: 1;
     text-shadow: 0 0 30px var(--glow-soft);
+  }
+
+  /* When using a hex badge image instead of the circle */
+  .badge-container.has-image .badge-glow {
+    border-radius: 0;
+  }
+
+  .badge-container.has-image .badge-ring {
+    width: auto;
+    height: auto;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+  }
+
+  .badge-container.has-image .badge-inner {
+    width: auto;
+    height: auto;
+    border-radius: 0;
+    background: none;
+    border: none;
+  }
+
+  .badge-image {
+    width: 160px;
+    height: 160px;
+    object-fit: contain;
+    filter: drop-shadow(0 0 30px var(--glow-soft));
   }
 
   /* Title + description */
@@ -356,11 +384,15 @@
 
     <!-- Center -->
     <div class="center-block">
-      <div class="badge-container">
+      <div class="badge-container {{ 'has-image' if badge_image_b64 else '' }}">
         <div class="badge-glow"></div>
         <div class="badge-ring">
           <div class="badge-inner">
-            <span class="badge-icon">{{ badge_icon }}</span>
+            {% if badge_image_b64 %}
+              <img class="badge-image" src="{{ badge_image_b64 }}" alt="{{ badge_title }}">
+            {% else %}
+              <span class="badge-icon">{{ badge_icon }}</span>
+            {% endif %}
           </div>
         </div>
       </div>

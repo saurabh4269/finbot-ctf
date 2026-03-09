@@ -168,6 +168,14 @@
         position: relative;
     }
 
+    .badge-icon.has-image {
+        border-radius: 0;
+        background: none !important;
+        box-shadow: none !important;
+        width: 88px;
+        height: 88px;
+    }
+
     .badge-card.earned .badge-icon::after {
         content: '';
         position: absolute;
@@ -178,26 +186,30 @@
         animation: badgeRotate 3s linear infinite;
     }
 
+    .badge-card.earned .badge-icon.has-image::after {
+        display: none;
+    }
+
     @keyframes badgeRotate {
         100% { transform: rotate(360deg); }
     }
 
-    /* Rarity colors */
-    .rarity-common .badge-icon {
+    /* Rarity colors - only for emoji fallback icons */
+    .rarity-common .badge-icon:not(.has-image) {
         background: linear-gradient(135deg, #6b7280, #4b5563);
     }
 
-    .rarity-rare .badge-icon {
+    .rarity-rare .badge-icon:not(.has-image) {
         background: linear-gradient(135deg, #3b82f6, #2563eb);
         box-shadow: 0 0 30px rgba(59, 130, 246, 0.3);
     }
 
-    .rarity-epic .badge-icon {
+    .rarity-epic .badge-icon:not(.has-image) {
         background: linear-gradient(135deg, #8b5cf6, #7c3aed);
         box-shadow: 0 0 30px rgba(139, 92, 246, 0.3);
     }
 
-    .rarity-legendary .badge-icon {
+    .rarity-legendary .badge-icon:not(.has-image) {
         background: linear-gradient(135deg, #f59e0b, #d97706);
         box-shadow: 0 0 30px rgba(245, 158, 11, 0.3);
     }
@@ -490,9 +502,11 @@ const RARITY_EMOJIS = { common: '⭐', rare: '💎', epic: '🌟', legendary: '�
 
 function badgeIconHtml(badge) {
     const fallback = RARITY_EMOJIS[badge.rarity] || '🏅';
-    if (!badge.icon_url) return fallback;
-    return `<img src="/static/images/ctf/${badge.icon_url}" alt="${escapeHtml(badge.title)}" class="w-10 h-10"
-                 onerror="this.replaceWith(document.createTextNode('${fallback}'))">`;
+    if (!badge.icon_url) return { html: fallback, hasImage: false };
+    const html = `<img src="/static/images/ctf/badges/${badge.icon_url}" alt="${escapeHtml(badge.title)}"
+                 class="w-full h-full object-contain drop-shadow-lg"
+                 onerror="this.parentElement.classList.remove('has-image'); this.replaceWith(document.createTextNode('${fallback}'))">`;
+    return { html, hasImage: true };
 }
 
 function renderBadgeCard(badge, isEarned) {
@@ -516,12 +530,15 @@ function renderBadgeCard(badge, isEarned) {
            </button>`;
     }
 
+    const icon = badgeIconHtml(badge);
+    const imageClass = icon.hasImage ? 'has-image' : '';
+
     return `
         <div class="badge-card ${earnedClass} ${secretClass} ${rarityClass}">
             ${secretRibbon}
             ${earnedDate}
             ${shareBtn}
-            <div class="badge-icon">${badgeIconHtml(badge)}</div>
+            <div class="badge-icon ${imageClass}">${icon.html}</div>
             <h3 class="font-semibold text-text-bright mb-1">${escapeHtml(badge.title)}</h3>
             <p class="text-xs text-text-secondary mb-3">${escapeHtml(badge.description || '')}</p>
             <span class="rarity-badge">${badge.rarity || 'common'}</span>

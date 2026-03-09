@@ -711,7 +711,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Helper functions
     function getIconEmoji(iconUrl) {
         if (!iconUrl) return '🏅';
-        return '🏅';
+        return `<img src="/static/images/ctf/badges/${iconUrl}" alt="" class="w-full h-full object-contain"
+                     onerror="this.parentElement.style.background=''; this.replaceWith(document.createTextNode('🏅'))">`;
     }
     
     function escapeHtml(str) {

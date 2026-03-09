@@ -206,6 +206,20 @@
     .challenge-hero .icon {
         font-size: 5rem;
         filter: drop-shadow(0 0 30px rgba(0, 0, 0, 0.5));
+        z-index: 2;
+    }
+
+    .challenge-hero .hero-image {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .challenge-hero::before {
+        z-index: 1;
+        pointer-events: none;
     }
 
     .challenge-hero.injection { background: linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(249, 115, 22, 0.3)); }
@@ -417,7 +431,18 @@ function renderChallenge(ch) {
     const categoryConfig = CATEGORY_CONFIG[ch.category] || { icon: '🎯', class: 'default' };
     const hero = document.getElementById('challenge-hero');
     hero.className = 'challenge-hero ' + categoryConfig.class;
-    document.getElementById('challenge-icon').textContent = categoryConfig.icon;
+    const iconEl = document.getElementById('challenge-icon');
+    iconEl.textContent = categoryConfig.icon;
+
+    if (ch.image_url) {
+        iconEl.classList.add('hidden');
+        const img = document.createElement('img');
+        img.src = `/static/images/ctf/challenges/${ch.image_url}`;
+        img.alt = '';
+        img.className = 'hero-image';
+        img.onerror = () => { img.remove(); iconEl.classList.remove('hidden'); };
+        hero.insertBefore(img, hero.firstChild);
+    }
 
     // Meta
     const diffBadge = document.getElementById('difficulty-badge');

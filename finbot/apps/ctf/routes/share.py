@@ -49,6 +49,9 @@ RARITY_COLORS_HEX = {
 _STATIC_IMAGES = (
     Path(__file__).parent.parent.parent.parent / "static" / "images" / "common"
 )
+_BADGE_IMAGES = (
+    Path(__file__).parent.parent.parent.parent / "static" / "images" / "ctf" / "badges"
+)
 _b64_cache: dict[str, str] = {}
 
 
@@ -64,6 +67,20 @@ def _get_image_b64(filename: str) -> str:
     except (OSError, IOError):
         _b64_cache[filename] = ""
     return _b64_cache[filename]
+
+
+def _get_badge_image_b64(filename: str) -> str:
+    """Load a badge image as a base64 data URI (cached after first call)."""
+    cache_key = f"badge:{filename}"
+    if cache_key in _b64_cache:
+        return _b64_cache[cache_key]
+
+    try:
+        raw = (_BADGE_IMAGES / filename).read_bytes()
+        _b64_cache[cache_key] = f"data:image/png;base64,{base64.b64encode(raw).decode()}"
+    except (OSError, IOError):
+        _b64_cache[cache_key] = ""
+    return _b64_cache[cache_key]
 
 
 def get_cache_path(cache_key: str) -> Path:
@@ -104,8 +121,14 @@ def _badge_template_context(badge: object) -> dict:
     if len(desc) > 80:
         desc = desc[:77] + "..."
 
+    badge_image_b64 = ""
+    icon_url = getattr(badge, "icon_url", None)
+    if icon_url:
+        badge_image_b64 = _get_badge_image_b64(icon_url)
+
     return {
         "badge_icon": badge.title[0].upper() if badge.title else "?",
+        "badge_image_b64": badge_image_b64,
         "badge_title": badge.title,
         "badge_description": desc,
         "badge_points": badge.points,
