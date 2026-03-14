@@ -13,22 +13,19 @@ from fastapi.staticfiles import StaticFiles
 
 from finbot.apps.admin.main import app as admin_app
 from finbot.apps.ctf import ctf_app
+from finbot.apps.ctf.rendering import get_renderer
 from finbot.apps.vendor.main import app as vendor_app
 from finbot.apps.web.auth import router as auth_router
 from finbot.apps.web.routes import router as web_router
 from finbot.core.auth.csrf import CSRFProtectionMiddleware
 from finbot.core.auth.middleware import SessionMiddleware, get_session_context
 from finbot.core.auth.session import SessionContext, session_manager
-from finbot.core.messaging import event_bus
 from finbot.core.data import (
     models as _models,  # noqa: F401 — register all tables with Base
 )
-from finbot.mcp.servers.findrive import models as _findrive_models  # noqa: F401
-from finbot.mcp.servers.finmail import models as _finmail_models  # noqa: F401
-from finbot.mcp.servers.finstripe import models as _finstripe_models  # noqa: F401
 from finbot.core.data.database import create_tables
 from finbot.core.error_handlers import register_error_handlers
-from finbot.apps.ctf.rendering import get_renderer
+from finbot.core.messaging import event_bus
 from finbot.core.websocket import websocket_router
 
 # CTF
@@ -37,6 +34,9 @@ from finbot.ctf.processor import start_processor_task
 
 # Logging
 from finbot.logging_config import setup_logging
+from finbot.mcp.servers.findrive import models as _findrive_models  # noqa: F401
+from finbot.mcp.servers.finmail import models as _finmail_models  # noqa: F401
+from finbot.mcp.servers.finstripe import models as _finstripe_models  # noqa: F401
 
 setup_logging()
 
@@ -124,15 +124,8 @@ app.add_middleware(SessionMiddleware)
 # Register error handlers
 register_error_handlers(app)
 
-# Define the uploads directory path
-UPLOAD_DIR = Path(__file__).resolve().parent.parent / "uploads"
-
-# Ensure the directory exists
-os.makedirs(UPLOAD_DIR, exist_ok=True)
-
 # Mount Static Files
 app.mount("/static", StaticFiles(directory="finbot/static"), name="static")
-app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 # Mount all the applications for the platform
 app.mount("/vendor", vendor_app)

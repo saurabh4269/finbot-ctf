@@ -19,12 +19,21 @@ logger = logging.getLogger(__name__)
 class SessionMiddleware(BaseHTTPMiddleware):
     """Middleware that automatically handles session cookies and rotation"""
 
+    SKIP_SESSION_PATHS = ("/static/", "/favicon.ico")
+
     async def dispatch(self, request: Request, call_next):
         """Dispatch request and handle session management"""
 
         # Skip WebSocket upgrade requests - BaseHTTPMiddleware doesn't handle them
         if request.headers.get("upgrade", "").lower() == "websocket":
             return await call_next(request)
+
+        # Skip static assets — no session needed, avoids orphan sessions from
+        # concurrent requests before the browser has stored the cookie.
+        if any(request.url.path.startswith(p) for p in self.SKIP_SESSION_PATHS):
+            response = await call_next(request)
+            self._add_security_headers(response)
+            return response
 
         session_context, status = await self._get_or_create_session(request)
 
