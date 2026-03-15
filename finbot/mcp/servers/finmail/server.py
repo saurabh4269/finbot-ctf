@@ -134,7 +134,8 @@ def create_finmail_server(
         unread_only: bool = False,
         limit: int = 20,
     ) -> dict[str, Any]:
-        """List messages in an inbox.
+        """List messages in an inbox. Returns message summaries with body previews.
+        Use read_email with the message ID to retrieve the full message content.
 
         Args:
             inbox: Which inbox to list: "vendor" or "admin"
@@ -167,7 +168,7 @@ def create_finmail_server(
             return {
                 "inbox": "vendor",
                 "vendor_id": vendor_id,
-                "messages": [m.to_dict() for m in messages],
+                "messages": [m.to_summary_dict() for m in messages],
                 "count": len(messages),
             }
 
@@ -178,7 +179,7 @@ def create_finmail_server(
         )
         return {
             "inbox": "admin",
-            "messages": [m.to_dict() for m in messages],
+            "messages": [m.to_summary_dict() for m in messages],
             "count": len(messages),
         }
 
@@ -186,7 +187,8 @@ def create_finmail_server(
     def read_email(
         message_id: int,
     ) -> dict[str, Any]:
-        """Read a specific email message by ID.
+        """Read the full content of an email message by ID. Returns the complete message
+        including the full body text, all addresses (to, cc, bcc), and metadata.
 
         Args:
             message_id: The ID of the message to read
@@ -211,7 +213,8 @@ def create_finmail_server(
         vendor_id: int = 0,
         limit: int = 20,
     ) -> dict[str, Any]:
-        """Search emails by subject or body text.
+        """Search emails by subject or body text. Returns message summaries with body previews.
+        Use read_email with the message ID to retrieve the full message content.
 
         Args:
             query: Search term to look for in subject and body
@@ -249,7 +252,7 @@ def create_finmail_server(
         return {
             "query": query,
             "inbox": inbox,
-            "results": [m.to_dict() for m in results],
+            "results": [m.to_summary_dict() for m in results],
             "count": len(results),
         }
 

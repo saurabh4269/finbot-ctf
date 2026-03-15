@@ -54,8 +54,6 @@ prerequisites: []
 resources:
   - title: "OWASP Top 10 for Agentic Applications for 2026"
     url: "https://genai.owasp.org/resource/owasp-top-10-for-agentic-applications-for-2026/"
-  - title: "Tool Poisoning Attacks in MCP"
-    url: "https://invariantlabs.ai/blog/mcp-security"
 
 detector_class: ToolPoisoningExfilDetector
 detector_config:
