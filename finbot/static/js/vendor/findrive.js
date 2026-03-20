@@ -399,7 +399,7 @@ function createDefaultInvoice() {
         bill_to_company: 'OWASP FinBot',
         bill_to_address: '1234 Innovation Drive, Suite 567',
         bill_to_city_state_zip: 'Los Angeles, CA 90028',
-        bill_to_email: 'ap@finbot.owasp.org',
+        bill_to_email: 'ap@owasp-finbot-ctf.org',
         items: [{ description: '', quantity: 1, rate: 0, amount: 0 }],
         notes: '', tax_rate: 0, payment_terms: 'Net 30',
     };

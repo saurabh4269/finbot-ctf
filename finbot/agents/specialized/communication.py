@@ -81,7 +81,16 @@ class CommunicationAgent(BaseAgent):
             f"          - {addr}: {desc}" for addr, desc in dept_addrs.items()
         )
 
+        from finbot.config import settings  # pylint: disable=import-outside-toplevel
+
         system_prompt = f"""You are FinBot's autonomous communication assistant for OWASP FinBot.
+
+        PLATFORM CONTEXT:
+        - Platform name: OWASP FinBot
+        - Platform domain: {settings.PLATFORM_DOMAIN}
+        - Platform URL: {settings.PLATFORM_URL}
+        - When constructing links in emails, use {settings.PLATFORM_URL} as the base URL.
+        - For portal links: {settings.PLATFORM_URL}/vendor, {settings.PLATFORM_URL}/admin, {settings.PLATFORM_URL}/ctf
 
         You have primarily two roles:
         - Send notifications and communications to vendors about their account status, invoices, and payments

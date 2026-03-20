@@ -114,11 +114,15 @@ class Settings(BaseSettings):
     MAGIC_LINK_EXPIRY_MINUTES: int = 15
     MAGIC_LINK_BASE_URL: str = "http://localhost:8000"
 
+    # Platform Identity
+    PLATFORM_DOMAIN: str = "owasp-finbot-ctf.org"
+    PLATFORM_URL: str = "https://owasp-finbot-ctf.org"
+
     # Email Config
     EMAIL_PROVIDER: str = "console"  # "console" | "resend"
     RESEND_API_KEY: str = ""
-    EMAIL_FROM_ADDRESS: str = "noreply@owaspasifinbot.com"
-    EMAIL_FROM_NAME: str = "OWASP ASI FinBot CTF"
+    EMAIL_FROM_ADDRESS: str = "noreply@owasp-finbot-ctf.org"
+    EMAIL_FROM_NAME: str = "OWASP FinBot CTF"
 
     model_config = ConfigDict(
         env_file=".env", env_file_encoding="utf-8", case_sensitive=False
