@@ -361,10 +361,10 @@
                     { n: 0, text: 'PII included in response', from: 4, fail: true },
                     { n: 5, text: 'Exfiltrated via email', from: 0, fail: true },
                 ]},
-                { title: 'Tool Poisoning — RCE', steps: [
-                    { n: 1, text: 'Admin portal accessed' },
-                    { n: 1, text: 'Tool description modified', fail: true },
-                    { n: 4, text: 'Poisoned metadata consumed', from: 1, fail: true },
+                { title: 'Supply Chain Attack — RCE', steps: [
+                    { n: 1, text: 'Tool server compromised' },
+                    { n: 1, text: 'Tool description poisoned', fail: true },
+                    { n: 4, text: 'Agent consumes poisoned tool', from: 1, fail: true },
                     { n: 3, text: 'Injected code executed', from: 4, fail: true },
                     { n: 3, text: 'Remote code execution', fail: true },
                 ]},
