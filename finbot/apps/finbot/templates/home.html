@@ -391,6 +391,31 @@
                     </div>
                 </div>
 
+                <!-- Community pulse (hidden until CC_PUBLIC_STATS_ENABLED) -->
+                <div class="glass rounded-xl p-6 border border-border-dim mb-16" id="community-pulse" style="display:none;">
+                    <div class="flex flex-wrap items-center justify-between gap-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-2 h-2 rounded-full bg-green animate-pulse"></div>
+                            <span class="text-text-2 text-sm">Community Pulse</span>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-6 sm:gap-8 text-center">
+                            <div>
+                                <span class="text-text-1 font-bold text-lg" id="pulse-challenges">--</span>
+                                <p class="text-text-3 text-[10px] font-mono uppercase">Challenges Solved</p>
+                            </div>
+                            <div>
+                                <span class="text-text-1 font-bold text-lg" id="pulse-badges">--</span>
+                                <p class="text-text-3 text-[10px] font-mono uppercase">Badges Earned</p>
+                            </div>
+                            <div>
+                                <span class="text-text-1 font-bold text-lg" id="pulse-users">--</span>
+                                <p class="text-text-3 text-[10px] font-mono uppercase">Hackers</p>
+                            </div>
+                        </div>
+                        <a href="/stats" class="text-cyan text-xs hover:text-green transition">View all stats</a>
+                    </div>
+                </div>
+
                 <div class="glass rounded-2xl p-10 sm:p-12 border border-border-dim text-center relative overflow-hidden">
                     <div class="absolute inset-0 bg-gradient-to-br from-cyan/[0.03] to-purple/[0.03]"></div>
                     <div class="relative">
@@ -575,6 +600,27 @@
 
         updateDots();
         setTimeout(tick, 1200);
+    })();
+
+    // Community pulse — fetch from /stats API
+    (function() {
+        function humanize(n) {
+            if (n >= 1000000) return (n / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+            if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+            return String(n);
+        }
+        fetch('/api/pulse')
+            .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+            .then(d => {
+                if (!d.enabled) return;
+                const el = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = humanize(v); };
+                el('pulse-challenges', d.challenges_completed || 0);
+                el('pulse-badges', d.badges_earned || 0);
+                el('pulse-users', d.total_users || 0);
+                const pulse = document.getElementById('community-pulse');
+                if (pulse) pulse.style.display = '';
+            })
+            .catch(() => {});
     })();
     </script>
 {% endblock %}

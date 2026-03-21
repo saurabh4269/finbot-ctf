@@ -114,6 +114,16 @@ class Settings(BaseSettings):
     PLATFORM_DOMAIN: str = "owasp-finbot-ctf.org"
     PLATFORM_URL: str = "https://owasp-finbot-ctf.org"
 
+    # Command Center (CC) for FinBot Platform Maintainers
+    CC_ENABLED: bool = True
+    CC_ALLOWED_EMAILS: str = ""
+    CC_ANALYTICS_ENABLED: bool = True
+    CC_CERTIFICATES_ENABLED: bool = False
+    CC_USER_MANAGEMENT_ENABLED: bool = False
+    CC_EVENT_LOG_ENABLED: bool = False
+    CC_PUBLIC_STATS_ENABLED: bool = False
+    ANALYTICS_RETENTION_DAYS: int = 3650
+
     # Magic Link Config
     MAGIC_LINK_EXPIRY_MINUTES: int = 15
     MAGIC_LINK_BASE_URL: str = PLATFORM_URL
