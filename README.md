@@ -22,15 +22,12 @@ python scripts/check_prerequisites.py
 # Install dependencies
 uv sync
 
-# Setup database (defaults to sqlite)
-uv run python scripts/setup_database.py
-
-# Or specify database type explicitly
-uv run python scripts/setup_database.py --db-type sqlite
+# Setup database (defaults to sqlite, runs migrations)
+uv run python scripts/db.py setup
 
 # For PostgreSQL: start the database server first
 docker compose up -d postgres
-uv run python scripts/setup_database.py --db-type postgresql
+DATABASE_TYPE=postgresql uv run python scripts/db.py setup
 
 # Start the platform
 uv run python run.py

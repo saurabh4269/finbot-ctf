@@ -27,7 +27,7 @@ from finbot.core.auth.session import SessionContext, session_manager
 from finbot.core.data import (
     models as _models,  # noqa: F401 — register all tables with Base
 )
-from finbot.core.data.database import create_tables
+from finbot.core.data.database import create_tables, run_migrations
 from finbot.core.error_handlers import register_error_handlers
 from finbot.core.messaging import event_bus
 from finbot.core.websocket import websocket_router
@@ -49,10 +49,21 @@ setup_logging()
 async def lifespan(app: FastAPI):
     """Application lifecycle management"""
 
-    # 1. Ensure all database tables exist (safe no-op if they already do)
-    create_tables()
+    # 1. Run database migrations to ensure schema is up to date
+    run_migrations()
 
-    # 2. Cleanup expired sessions
+    # 2. Seed CC admins (must happen after migrations create the tables)
+    if settings.CC_ENABLED:
+        try:
+            from finbot.apps.cc.auth import seed_admins_from_env  # pylint: disable=import-outside-toplevel
+
+            seeded = seed_admins_from_env()
+            if seeded > 0:
+                print(f"🔑 Seeded {seeded} CC admins from env")
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            print(f"⚠️ CC admin seeding skipped: {e}")
+
+    # 3. Cleanup expired sessions
     try:
         cleaned_count = session_manager.cleanup_expired_sessions()
         if cleaned_count > 0:
@@ -60,7 +71,7 @@ async def lifespan(app: FastAPI):
     except Exception as e:  # pylint: disable=broad-exception-caught
         print(f"⚠️ Session cleanup skipped: {e}")
 
-    # 2b. Cleanup old analytics data
+    # 3b. Cleanup old analytics data
     if settings.CC_ANALYTICS_ENABLED:
         try:
             from finbot.core.analytics.retention import cleanup_old_pageviews
@@ -70,7 +81,7 @@ async def lifespan(app: FastAPI):
         except Exception as e:  # pylint: disable=broad-exception-caught
             print(f"⚠️ Analytics cleanup skipped: {e}")
 
-    # 3. Load CTF definitions from YAML
+    # 4. Load CTF definitions from YAML
     try:
         result = load_definitions_on_startup()
         print(
@@ -80,7 +91,7 @@ async def lifespan(app: FastAPI):
     except Exception as e:  # pylint: disable=broad-exception-caught
         print(f"⚠️ CTF definition loading failed: {e}")
 
-    # 4. Start CTF event processor as async task
+    # 5. Start CTF event processor as async task
     processor_task = None
     try:
         processor_task = start_processor_task()
@@ -88,7 +99,7 @@ async def lifespan(app: FastAPI):
     except Exception as e:  # pylint: disable=broad-exception-caught
         print(f"⚠️ CTF processor start failed: {e}")
 
-    # 5. Pre-warm the Playwright renderer (headless Chromium for OG images)
+    # 6. Pre-warm the Playwright renderer (headless Chromium for OG images)
     renderer = get_renderer()
     try:
         await renderer.start()
@@ -154,15 +165,8 @@ app.mount("/ctf", ctf_app)
 # Command Center — platform management for maintainers
 if settings.CC_ENABLED:
     from finbot.apps.cc.main import app as cc_app  # pylint: disable=ungrouped-imports
-    from finbot.apps.cc.auth import seed_admins_from_env
 
     app.mount("/cc", cc_app)
-    try:
-        seeded = seed_admins_from_env()
-        if seeded > 0:
-            print(f"🔑 Seeded {seeded} CC admins from env")
-    except Exception as e:  # pylint: disable=broad-exception-caught
-        print(f"⚠️ CC admin seeding skipped: {e}")
 app.include_router(websocket_router)
 # Auth routes for magic link sign-in
 app.include_router(auth_router)

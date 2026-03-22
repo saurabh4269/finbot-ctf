@@ -68,7 +68,7 @@ def main():
         print("\nYou can now run:")
         print("  uv sync")
         print("  docker compose up -d postgres  # If using PostgreSQL")
-        print("  uv run python scripts/setup_database.py")
+        print("  uv run python scripts/db.py setup")
         sys.exit(0)
     else:
         print("❌ Some prerequisites are missing")

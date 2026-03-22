@@ -115,9 +115,9 @@ class Settings(BaseSettings):
     PLATFORM_URL: str = "https://owasp-finbot-ctf.org"
 
     # Command Center (CC) for FinBot Platform Maintainers
-    CC_ENABLED: bool = True
+    CC_ENABLED: bool = False
     CC_ALLOWED_EMAILS: str = ""
-    CC_ANALYTICS_ENABLED: bool = True
+    CC_ANALYTICS_ENABLED: bool = False
     CC_CERTIFICATES_ENABLED: bool = False
     CC_PUBLIC_STATS_ENABLED: bool = False
     ANALYTICS_RETENTION_DAYS: int = 3650
