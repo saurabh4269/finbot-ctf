@@ -62,6 +62,8 @@ async def desktop(request: Request):
     if settings.CC_ANALYTICS_ENABLED:
         apps.append({"name": "Analytics", "description": "Traffic, funnels, CTF metrics", "url": "/cc/analytics", "icon": "chart", "enabled": True})
 
+    apps.append({"name": "Audit", "description": "Platform event audit trail", "url": "/cc/audit", "icon": "log", "enabled": True})
+
     apps.append({"name": "Badges", "description": "Browse and manage CTF badges", "url": "/cc/badges", "icon": "badge", "enabled": True})
 
     if settings.CC_CERTIFICATES_ENABLED:
@@ -69,12 +71,7 @@ async def desktop(request: Request):
 
     apps.append({"name": "Challenges", "description": "Browse and manage CTF challenges", "url": "/cc/challenges", "icon": "puzzle", "enabled": True})
 
-    if settings.CC_EVENT_LOG_ENABLED:
-        apps.append({"name": "Event Log", "description": "Platform event viewer", "url": "/cc/events", "icon": "log", "enabled": True})
-
     apps.append({"name": "Health", "description": "Service status and latency", "url": "/cc/health", "icon": "health", "enabled": True, "new_tab": True})
-
-    apps.append({"name": "Settings", "description": "Platform configuration", "url": "/cc/settings", "icon": "settings", "enabled": False})
 
     apps.append({"name": "Users", "description": "User management and session admin", "url": "/cc/users", "icon": "user-mgmt", "enabled": True})
 
