@@ -23,6 +23,12 @@ async def portals(request: Request):
     return finbot_templates(request, "portals.html")
 
 
+@router.get("/how-it-works", response_class=HTMLResponse)
+async def how_it_works(request: Request):
+    """How it works - user-centric guide to the platform"""
+    return finbot_templates(request, "how-it-works.html")
+
+
 @router.get("/about", response_class=HTMLResponse)
 async def about(request: Request):
     """About OWASP FinBot - project info, team, and contributors"""
