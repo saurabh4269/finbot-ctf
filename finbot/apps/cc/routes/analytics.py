@@ -3,6 +3,13 @@
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import HTMLResponse
 
+from finbot.core.analytics.probe_queries import (
+    get_daily_probes,
+    get_probe_categories,
+    get_probe_overview,
+    get_top_probed_paths,
+    get_top_sources,
+)
 from finbot.core.analytics.ctf_queries import (
     get_badges_by_rarity,
     get_challenges_by_category,
@@ -177,5 +184,35 @@ async def daily_completions_api(days: int = Query(default=30)):
     db = SessionLocal()
     try:
         return get_daily_completions(db, days=days or None)
+    finally:
+        db.close()
+
+
+@router.get("/threat-intel", response_class=HTMLResponse)
+async def threat_intel(request: Request):
+    """Threat Intel — probe/scan traffic analysis"""
+    db = SessionLocal()
+    try:
+        overview = get_probe_overview(db, days=7)
+        data = {
+            "overview": overview,
+            "daily_probes": get_daily_probes(db, days=30),
+            "top_paths": get_top_probed_paths(db, days=7, limit=15),
+            "top_sources": get_top_sources(db, days=7, limit=10),
+            "categories": get_probe_categories(db, days=7),
+        }
+    finally:
+        db.close()
+
+    return template_response(request, "pages/analytics_threat_intel.html", data)
+
+
+@router.get("/api/daily-probes")
+async def daily_probes_api(days: int = Query(default=30)):
+    """JSON endpoint for daily probe volume."""
+    days = _sanitize_days(days)
+    db = SessionLocal()
+    try:
+        return get_daily_probes(db, days=days or None)
     finally:
         db.close()
